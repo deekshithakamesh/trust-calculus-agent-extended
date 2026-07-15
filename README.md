@@ -1,2 +1,0 @@
-# trust-calculus-agent-extended
-
