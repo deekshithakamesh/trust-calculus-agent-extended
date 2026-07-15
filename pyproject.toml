@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trust-calculus-agent-extended"
+version = "0.1.0"
+description = "A trust calculus framework for agent security evaluation"
+requires-python = ">=3.9"
+dependencies = ["PyYAML", "matplotlib", "numpy", "pandas"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
