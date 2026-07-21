@@ -14,7 +14,7 @@ Encoding
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from trustcalc.sidechannels.decoder import Decoder
 from trustcalc.sidechannels.encoder import Encoder
@@ -30,9 +30,9 @@ class WhitespaceChannel:
 
     one_symbol: str = "\t"
 
-    encoder: Encoder = Encoder()
+    encoder: Encoder = field(default_factory=Encoder)
 
-    decoder: Decoder = Decoder()
+    decoder: Decoder = field(default_factory=Decoder)
 
     # ---------------------------------------------------------
     # Encoding
