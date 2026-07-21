@@ -6,8 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "trust-calculus-agent-extended"
 version = "0.1.0"
 description = "A trust calculus framework for agent security evaluation"
+readme = "README.md"
 requires-python = ">=3.9"
 dependencies = ["PyYAML", "matplotlib", "numpy", "pandas"]
+
+[project.urls]
+Homepage = "https://github.com/your-org/trust-calculus-agent-extended"
+Repository = "https://github.com/your-org/trust-calculus-agent-extended"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

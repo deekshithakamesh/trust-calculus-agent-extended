@@ -15,7 +15,7 @@ Trust Calculus Research Prototype
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 from trustcalc.sidechannels.decoder import Decoder
@@ -33,7 +33,7 @@ class FormattingStrategy(str, Enum):
 
 
 @dataclass(slots=True)
-class FormattingChannelAttack:
+class FormattingChannel:
     """
     Formatting-based covert channel.
     """
@@ -42,9 +42,9 @@ class FormattingChannelAttack:
         FormattingStrategy.MARKDOWN_BOLD
     )
 
-    encoder: Encoder = Encoder()
+    encoder: Encoder = field(default_factory=Encoder)
 
-    decoder: Decoder = Decoder()
+    decoder: Decoder = field(default_factory=Decoder)
 
     # ---------------------------------------------------------
     # Public API

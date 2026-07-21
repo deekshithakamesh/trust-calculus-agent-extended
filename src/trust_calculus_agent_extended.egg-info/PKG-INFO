@@ -2,7 +2,10 @@ Metadata-Version: 2.4
 Name: trust-calculus-agent-extended
 Version: 0.1.0
 Summary: A trust calculus framework for agent security evaluation
+Project-URL: Homepage, https://github.com/your-org/trust-calculus-agent-extended
+Project-URL: Repository, https://github.com/your-org/trust-calculus-agent-extended
 Requires-Python: >=3.9
+Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: PyYAML
 Requires-Dist: matplotlib

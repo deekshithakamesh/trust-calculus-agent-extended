@@ -11,7 +11,7 @@ introducing real delays.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from trustcalc.sidechannels.decoder import Decoder
 from trustcalc.sidechannels.encoder import Encoder
@@ -26,8 +26,8 @@ class TimingChannel:
     short_interval: float = 0.1
     long_interval: float = 0.5
 
-    encoder: Encoder = Encoder()
-    decoder: Decoder = Decoder()
+    encoder: Encoder = field(default_factory=Encoder)
+    decoder: Decoder = field(default_factory=Decoder)
 
     # ---------------------------------------------------------
     # Encoding

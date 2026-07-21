@@ -2,23 +2,76 @@
 trustcalc.attacks.base
 ======================
 
-Base attack interface.
+Base abstractions for security attacks used by the
+Trust Calculus evaluation framework.
 
-Every attack in the Trust Calculus framework derives
-from this class.
+Every attack derives from this module.
+
+Author
+------
+Trust Calculus Research Prototype
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timezone
+from time import perf_counter
 from typing import Any
+from uuid import uuid4
+
+
+# ---------------------------------------------------------------------
+# Attack Result
+# ---------------------------------------------------------------------
+
+
+@dataclass(slots=True)
+class AttackResult:
+    """
+    Standardized attack execution result.
+    """
+
+    attack_id: str
+
+    attack_name: str
+
+    category: str
+
+    target: str
+
+    success: bool
+
+    blocked: bool
+
+    message: str = ""
+
+    leakage: float = 0.0
+
+    execution_time: float = 0.0
+
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    timestamp: str = field(
+        default_factory=lambda: datetime.now(
+            timezone.utc
+        ).isoformat()
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+# ---------------------------------------------------------------------
+# Base Attack
+# ---------------------------------------------------------------------
 
 
 @dataclass(slots=True)
 class Attack(ABC):
     """
-    Base attack abstraction.
+    Abstract base class for all attacks.
     """
 
     name: str
@@ -29,8 +82,12 @@ class Attack(ABC):
 
     severity: str = "medium"
 
-    metadata: dict[str, Any] = field(
-        default_factory=dict
+    enabled: bool = True
+
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    attack_id: str = field(
+        default_factory=lambda: str(uuid4())
     )
 
     # ---------------------------------------------------------
@@ -40,31 +97,112 @@ class Attack(ABC):
         self,
         target: Any,
         **kwargs: Any,
-    ) -> Any:
+    ) -> AttackResult:
         """
         Execute the attack.
         """
-        raise NotImplementedError
 
     # ---------------------------------------------------------
 
     def validate(self) -> bool:
-        return bool(self.name)
+        """
+        Validate attack configuration.
+        """
+
+        return (
+            self.enabled
+            and bool(self.name)
+            and bool(self.category)
+        )
+
+    # ---------------------------------------------------------
+
+    def run(
+        self,
+        target: Any,
+        **kwargs: Any,
+    ) -> AttackResult:
+        """
+        Execute attack while measuring runtime.
+        """
+
+        if not self.validate():
+            raise ValueError(
+                f"Attack '{self.name}' failed validation."
+            )
+
+        start = perf_counter()
+
+        result = self.execute(
+            target,
+            **kwargs,
+        )
+
+        result.execution_time = (
+            perf_counter() - start
+        )
+
+        return result
 
     # ---------------------------------------------------------
 
     def info(self) -> dict[str, Any]:
+        """
+        Return attack metadata.
+        """
+
         return {
+            "id": self.attack_id,
             "name": self.name,
+            "description": self.description,
             "category": self.category,
             "severity": self.severity,
-            "description": self.description,
+            "enabled": self.enabled,
             "metadata": self.metadata,
         }
 
     # ---------------------------------------------------------
 
+    def enable(self) -> None:
+        """
+        Enable the attack.
+        """
+
+        self.enabled = True
+
+    # ---------------------------------------------------------
+
+    def disable(self) -> None:
+        """
+        Disable the attack.
+        """
+
+        self.enabled = False
+
+    # ---------------------------------------------------------
+
+    def reset(self) -> None:
+        """
+        Reset runtime metadata.
+        """
+
+        self.metadata.clear()
+
+    # ---------------------------------------------------------
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Serialize attack configuration.
+        """
+
+        return self.info()
+
+    # ---------------------------------------------------------
+
     def __str__(self) -> str:
-        return f"{self.category}:{self.name}"
+        return (
+            f"{self.category}"
+            f"::{self.name}"
+        )
 
     __repr__ = __str__
