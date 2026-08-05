@@ -71,6 +71,31 @@ class PolicyEnforcer:
                     )
                 )
 
+        # --------------------------------------------------
+        # Information-flow enforcement
+        # --------------------------------------------------
+
+        source_label = context.labels.get(
+            "source",
+        )
+
+        destination_label = context.labels.get(
+            "destination",
+        )
+
+        if (
+            source_label is not None
+            and destination_label is not None
+        ):
+
+            decision = self.check_information_flow(
+                source_label,
+                destination_label,
+            )
+
+            if decision.denied:
+                return decision
+
         return Decision.allow()
 
     # ---------------------------------------------------------
@@ -109,17 +134,37 @@ class PolicyEnforcer:
         self,
         source_label,
         destination_label,
-    ) -> bool:
+    ) -> Decision:
         """
         Verify information-flow constraints.
+
+        This is fail-closed: if the source label does not expose a
+        ``can_flow_to`` check, access is denied rather than silently
+        permitted. This prevents an accidental bypass of the
+        information-flow control policy.
         """
 
-        if hasattr(source_label, "can_flow_to"):
-            return source_label.can_flow_to(
-                destination_label
+        if not hasattr(source_label, "can_flow_to"):
+
+            return Decision.deny(
+                explanation=(
+                    "Information-flow check unavailable; "
+                    "denying by default."
+                )
             )
 
-        return True
+        if source_label.can_flow_to(destination_label):
+
+            return Decision.allow(
+                "Information flow permitted."
+            )
+
+        return Decision.deny(
+            explanation=(
+                "Information flow violates confidentiality, "
+                "integrity, or compartment constraints."
+            )
+        )
 
     # ---------------------------------------------------------
     # Convenience

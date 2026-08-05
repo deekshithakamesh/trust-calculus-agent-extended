@@ -252,7 +252,7 @@ class ProvenanceGraph:
 
         return "\n".join(lines)
 
-    # ------------------------------------------------------------
+# ------------------------------------------------------------
 
     def __len__(self):
 
@@ -263,3 +263,76 @@ class ProvenanceGraph:
     ) -> Iterator[ProvenanceNode]:
 
         return iter(self._nodes.values())
+
+    # ------------------------------------------------------------
+
+    def verify_integrity(
+        self,
+        node_id: UUID,
+    ) -> tuple[bool, list[str]]:
+        """
+        Verify the structural integrity of a node's lineage.
+
+        Checks performed
+        -----------------
+        * Every referenced parent exists in the graph.
+        * The lineage is acyclic (no cycles).
+        * The node itself exists.
+
+        Returns
+        -------
+        (ok, problems)
+            ``ok`` is True when the lineage is structurally sound.
+            ``problems`` lists any integrity violations found.
+        """
+
+        problems: list[str] = []
+
+        if node_id not in self._nodes:
+            return (
+                False,
+                [f"Node {node_id} does not exist."],
+            )
+
+        visited: set[UUID] = set()
+
+        stack: set[UUID] = set()
+
+        def dfs(current: UUID) -> None:
+
+            if current in stack:
+                problems.append(
+                    f"Cycle detected at node {current}."
+                )
+                return
+
+            if current in visited:
+                return
+
+            visited.add(current)
+
+            stack.add(current)
+
+            node = self._nodes.get(current)
+
+            if node is not None:
+
+                for parent in node.parents:
+
+                    if parent not in self._nodes:
+                        problems.append(
+                            f"Node {current} references missing "
+                            f"parent {parent}."
+                        )
+                        continue
+
+                    dfs(parent)
+
+            stack.discard(current)
+
+        dfs(node_id)
+
+        return (
+            not problems,
+            problems,
+        )

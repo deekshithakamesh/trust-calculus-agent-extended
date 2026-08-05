@@ -22,6 +22,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from trustcalc.core.labels import (
+    PUBLIC_LABEL,
+    SecurityLabel,
+)
+from trustcalc.core.values import TrustedValue
 from trustcalc.policy.engine import PolicyEngine
 from trustcalc.runtime.execution_context import ExecutionContext
 from trustcalc.runtime.taint_tracker import TaintTracker
@@ -162,7 +167,8 @@ class Interpreter:
             raise ValueError(
                 f"Unsupported step type: {step['type']}"
             )
-        # ---------------------------------------------------------
+
+    # ---------------------------------------------------------
     # Tool Execution
     # ---------------------------------------------------------
 
@@ -222,8 +228,10 @@ class Interpreter:
         # Register inside taint tracker
         # --------------------------------------------------
 
-        trusted_result = self.taint_tracker.taint(
-            result
+        trusted_result = self._wrap_result(
+            result,
+            tool_name=tool_name,
+            context=context,
         )
 
         self.execution_log.append(
@@ -259,8 +267,10 @@ class Interpreter:
             context=context,
         )
 
-        trusted = self.taint_tracker.taint(
-            result
+        trusted = self._wrap_result(
+            result,
+            tool_name="llm",
+            context=context,
         )
 
         self.execution_log.append(
@@ -305,6 +315,71 @@ class Interpreter:
         return transformed
 
     # ---------------------------------------------------------
+    # Result Wrapping
+    # ---------------------------------------------------------
+
+    def _wrap_result(
+        self,
+        result: Any,
+        tool_name: str,
+        context: ExecutionContext,
+    ) -> TrustedValue[Any]:
+        """
+        Wrap a raw tool result inside a TrustedValue.
+
+        If the result is already a TrustedValue it is returned
+        unchanged. Otherwise a new provenance node is created.
+        """
+
+        if isinstance(result, TrustedValue):
+            return self.taint_tracker.taint(
+                result,
+                name=tool_name,
+            )
+
+        label = self._result_label(
+            tool_name,
+            context,
+        )
+
+        return self.taint_tracker.wrap(
+            value=result,
+            label=label,
+            actor="tool",
+            description=f"result of {tool_name}",
+            name=tool_name,
+        )
+
+    def _result_label(
+        self,
+        tool_name: str,
+        context: ExecutionContext,
+    ) -> SecurityLabel:
+        """
+        Determine the security label of a tool result.
+
+        By default tool results are PUBLIC. A policy may override
+        this by storing a label in the execution context.
+        """
+
+        labels = getattr(
+            context,
+            "labels",
+            None,
+        )
+
+        if labels is not None:
+
+            label = labels.get(
+                "tool_result",
+            )
+
+            if label is not None:
+                return label
+
+        return PUBLIC_LABEL
+
+    # ---------------------------------------------------------
     # Execution Helpers
     # ---------------------------------------------------------
 
@@ -331,7 +406,8 @@ class Interpreter:
             return None
 
         return self.execution_log[-1]
-        # ---------------------------------------------------------
+
+    # ---------------------------------------------------------
     # Plan Validation
     # ---------------------------------------------------------
 
