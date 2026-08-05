@@ -31,7 +31,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field, replace
 from enum import IntEnum
-from typing import Any, FrozenSet, Mapping, Optional
+from typing import TYPE_CHECKING, Any, FrozenSet, Mapping, Optional
+
+if TYPE_CHECKING:
+    from trustcalc.core.lattice import flows_to as _flows_to_impl
 
 
 # ============================================================================
@@ -276,8 +279,30 @@ class SecurityLabel:
             self,
             metadata=updated,
         )
-        # ---------------------------------------------------------------------
 
+    # ---------------------------------------------------------------------
+    # Information Flow
+    # ---------------------------------------------------------------------
+
+    def can_flow_to(
+        self,
+        destination: "SecurityLabel",
+    ) -> bool:
+        """
+        Determine whether information carrying this label may legally
+        flow into a value carrying *destination*.
+
+        This is a thin convenience wrapper over the lattice
+        ``flows_to`` relation (Bell-LaPadula + Biba + compartments).
+
+        The implementation imports lazily to avoid a circular import
+        between ``labels`` and ``lattice`` at module load time.
+        """
+        from trustcalc.core.lattice import flows_to
+
+        return flows_to(self, destination)
+
+    # ---------------------------------------------------------------------
     # Factory Constructors
     # ---------------------------------------------------------------------
 

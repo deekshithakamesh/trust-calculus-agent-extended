@@ -38,13 +38,18 @@ class TaintTracker:
     - maintaining provenance
     - validating information flow
 
-    The tracker itself contains only one mutable object:
+    The tracker itself contains mutable state:
 
         ProvenanceGraph
+        values (name -> TrustedValue registry)
     """
 
     graph: ProvenanceGraph = field(
         default_factory=ProvenanceGraph
+    )
+
+    values: dict[str, TrustedValue[Any]] = field(
+        default_factory=dict
     )
 
     # ---------------------------------------------------------
@@ -57,6 +62,7 @@ class TaintTracker:
         label: SecurityLabel,
         actor: str = "runtime",
         description: str = "",
+        name: str | None = None,
         **metadata: Any,
     ) -> TrustedValue[T]:
         """
@@ -67,24 +73,23 @@ class TaintTracker:
         """
 
         node = ProvenanceNode.origin(
-
             actor=actor,
-
             description=description,
-
             **metadata,
         )
 
         self.graph.add(node)
 
-        return TrustedValue(
-
+        trusted = TrustedValue(
             value=value,
-
             label=label,
-
             provenance=node,
         )
+
+        if name is not None:
+            self.values[name] = trusted
+
+        return trusted
 
     # ---------------------------------------------------------
     # Existing Value
@@ -93,6 +98,7 @@ class TaintTracker:
     def taint(
         self,
         value: TrustedValue[T],
+        name: str | None = None,
     ) -> TrustedValue[T]:
         """
         Register an existing TrustedValue
@@ -105,10 +111,12 @@ class TaintTracker:
         if not self.graph.contains(
             value.provenance.id
         ):
-
             self.graph.add(
                 value.provenance
             )
+
+        if name is not None:
+            self.values[name] = value
 
         return value
 
@@ -140,7 +148,8 @@ class TaintTracker:
         return self.graph.explain(
             value.provenance.id
         )
-        # ---------------------------------------------------------
+
+    # ---------------------------------------------------------
     # Merge
     # ---------------------------------------------------------
 
@@ -151,6 +160,7 @@ class TaintTracker:
         merge_fn: Callable[[T, U], Any],
         actor: str = "runtime",
         description: str = "merge",
+        name: str | None = None,
         **metadata: Any,
     ) -> TrustedValue[Any]:
         """
@@ -183,11 +193,16 @@ class TaintTracker:
 
         self.graph.add(node)
 
-        return TrustedValue(
+        trusted = TrustedValue(
             value=merged_value,
             label=merged_label,
             provenance=node,
         )
+
+        if name is not None:
+            self.values[name] = trusted
+
+        return trusted
 
     # ---------------------------------------------------------
     # Transform
@@ -200,6 +215,7 @@ class TaintTracker:
         operation: OperationType = OperationType.TRANSFORM,
         actor: str = "runtime",
         description: str = "",
+        name: str | None = None,
         **metadata: Any,
     ) -> TrustedValue[U]:
         """
@@ -220,11 +236,16 @@ class TaintTracker:
 
         self.graph.add(node)
 
-        return TrustedValue(
+        trusted = TrustedValue(
             value=new_value,
             label=value.label,
             provenance=node,
         )
+
+        if name is not None:
+            self.values[name] = trusted
+
+        return trusted
 
     # ---------------------------------------------------------
     # Relabel
@@ -236,6 +257,7 @@ class TaintTracker:
         label: SecurityLabel,
         actor: str = "runtime",
         description: str = "relabel",
+        name: str | None = None,
         **metadata: Any,
     ) -> TrustedValue[T]:
         """
@@ -255,11 +277,16 @@ class TaintTracker:
 
         self.graph.add(node)
 
-        return TrustedValue(
+        trusted = TrustedValue(
             value=value.value,
             label=label,
             provenance=node,
         )
+
+        if name is not None:
+            self.values[name] = trusted
+
+        return trusted
 
     # ---------------------------------------------------------
     # Clone
@@ -305,7 +332,8 @@ class TaintTracker:
             )
             for value in values
         ]
-        # ---------------------------------------------------------
+
+    # ---------------------------------------------------------
     # Sanitize
     # ---------------------------------------------------------
 
@@ -315,6 +343,7 @@ class TaintTracker:
         sanitized_label: SecurityLabel,
         actor: str = "policy",
         description: str = "sanitize",
+        name: str | None = None,
         **metadata: Any,
     ) -> TrustedValue[T]:
         """
@@ -335,12 +364,17 @@ class TaintTracker:
 
         self.graph.add(node)
 
-        return TrustedValue(
+        trusted = TrustedValue(
             value=value.value,
             label=sanitized_label,
             provenance=node,
             metadata=value.metadata,
         )
+
+        if name is not None:
+            self.values[name] = trusted
+
+        return trusted
 
     # ---------------------------------------------------------
     # Downgrade
@@ -393,12 +427,57 @@ class TaintTracker:
 
         self.graph.add(node)
 
-        return TrustedValue(
+        trusted = TrustedValue(
             value=value.value,
             label=new_label,
             provenance=node,
             metadata=value.metadata,
         )
+
+        return trusted
+
+    # ---------------------------------------------------------
+    # Value Registry
+    # ---------------------------------------------------------
+
+    def get_taint(
+        self,
+        name: str,
+    ) -> TrustedValue[Any] | None:
+        """
+        Retrieve a tracked value by name.
+
+        Returns None if the name is unknown.
+        """
+
+        return self.values.get(name)
+
+    def register_taint(
+        self,
+        name: str,
+        value: TrustedValue[Any],
+    ) -> TrustedValue[Any]:
+        """
+        Register a value under a name.
+        """
+
+        self.values[name] = value
+
+        return value
+
+    def tracked_names(self) -> list[str]:
+        """
+        Return the names of all tracked values.
+        """
+
+        return list(self.values.keys())
+
+    def clear_values(self) -> None:
+        """
+        Clear the value registry.
+        """
+
+        self.values.clear()
 
     # ---------------------------------------------------------
     # Lineage
@@ -444,6 +523,7 @@ class TaintTracker:
 
         return {
             "nodes": len(self.graph),
+            "tracked_values": len(self.values),
         }
 
     # ---------------------------------------------------------

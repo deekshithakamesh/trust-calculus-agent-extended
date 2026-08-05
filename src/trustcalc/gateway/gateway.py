@@ -25,8 +25,13 @@ from typing import Any
 
 from trustcalc.gateway.audit import GatewayAudit
 from trustcalc.gateway.enforcement import PolicyEnforcer
-from trustcalc.gateway.exceptions import AuthorizationError, InvalidToolError, ToolExecutionError
+from trustcalc.gateway.exceptions import (
+    AuthorizationError,
+    InvalidToolError,
+    ToolExecutionError,
+)
 from trustcalc.gateway.validator import GatewayValidator
+from trustcalc.policy.decisions import Decision
 from trustcalc.runtime.execution_context import ExecutionContext
 from trustcalc.tools.registry import ToolRegistry
 
@@ -50,6 +55,47 @@ class ToolGateway:
     # ---------------------------------------------------------
     # Public API
     # ---------------------------------------------------------
+
+    def authorize(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        context: ExecutionContext,
+    ) -> Decision:
+        """
+        Evaluate a tool request without executing it.
+
+        Returns a Decision. The caller is responsible for
+        acting on the decision.
+        """
+
+        tool = self.registry.get(tool_name)
+
+        if tool is None:
+
+            return Decision.deny(
+                explanation=(
+                    f"Unknown tool '{tool_name}'."
+                )
+            )
+
+        self.validator.validate(
+            tool,
+            arguments,
+        )
+
+        decision = self.enforcer.authorize(
+            tool=tool,
+            arguments=arguments,
+            context=context,
+        )
+
+        self.audit.record_authorization(
+            tool_name,
+            decision,
+        )
+
+        return decision
 
     def execute(
         self,
@@ -114,7 +160,8 @@ class ToolGateway:
         )
 
         return result
-        # ---------------------------------------------------------
+
+    # ---------------------------------------------------------
 
     def contains(
         self,
