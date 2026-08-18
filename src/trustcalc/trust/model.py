@@ -73,6 +73,50 @@ class TrustStore:
             rec.beta += 1.0
         rec.last_update = now_ts()
 
+    def record_evidence(self, subject: str, action: str, evidence) -> None:
+        """Record a rich Evidence object. The evidence object is expected to provide:
+        - .weight (float): positive weight
+        - .type (str): 'success'|'failure'|'anomaly'|'recommendation' etc.
+        - .provenance (Iterable[str]) optional
+
+        This method maps evidence -> fractional updates to the Beta counts.
+        The implementation is intentionally simple: map weight to alpha/beta increments
+        according to evidence.type. Provenance discounting should be applied by callers
+        or by a provenance helper prior to calling this method.
+        """
+        # Avoid direct import cycles by importing the Evidence type lazily
+        try:
+            from trustcalc.trust.evidence import Evidence
+        except Exception:
+            Evidence = None  # type: ignore
+
+        # Basic validation
+        weight = getattr(evidence, "weight", None)
+        if weight is None:
+            # fallback to 'strength' or default to 1.0
+            weight = getattr(evidence, "strength", 1.0)
+        try:
+            weight = float(weight)
+        except Exception:
+            weight = 1.0
+
+        typ = getattr(evidence, "type", "success")
+        rec = self._get_record(subject, action)
+        if typ in ("success", "ok", "true"):
+            rec.alpha += weight
+        elif typ in ("failure", "err", "false"):
+            rec.beta += weight
+        elif typ == "anomaly":
+            # anomalies should increase beta more strongly
+            rec.beta += weight * 1.5
+        elif typ == "recommendation":
+            # recommendations are weaker evidence for behavior; treat as fractional success
+            rec.alpha += weight * 0.5
+        else:
+            # default: treat as weak success
+            rec.alpha += weight * 0.25
+        rec.last_update = now_ts()
+
     def get_posterior(self, subject: str, action: str) -> Tuple[float, float]:
         """Return (alpha, beta) for the subject/action after applying decay."""
         rec = self._get_record(subject, action)
@@ -100,6 +144,19 @@ class TrustStore:
         if conf > 1.0:
             conf = 1.0
         return conf
+
+    def get_trust_state(self, subject: str, action: str) -> Dict[str, object]:
+        """Return a serializable trust state snapshot for explainability and decision-making."""
+        alpha, beta = self.get_posterior(subject, action)
+        return {
+            "subject": subject,
+            "action": action,
+            "alpha": alpha,
+            "beta": beta,
+            "expected": self.expected_trust(subject, action),
+            "confidence": self.confidence(subject, action),
+            "last_update": self._get_record(subject, action).last_update,
+        }
 
 
 __all__ = ["TrustStore", "TrustRecord"]
