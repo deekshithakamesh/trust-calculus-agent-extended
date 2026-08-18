@@ -1,0 +1,2 @@
+{"entity": "tool-A", "action": "read-public", "result": "success", "evidence": {"id": "004e459b-a710-4a62-8541-fed17930a7a0", "source": "monitor-1", "timestamp": "2026-08-18T09:50:12.352754+00:00", "type": "success", "payload": null, "strength": 0.9, "weight": 0.95, "provenance": []}}
+{"entity": "tool-A", "action": "write-db", "result": "success", "evidence": {"id": "f24af399-9b2a-4dfd-81f9-8eb3ec82193b", "source": "attacker-1", "timestamp": "2026-08-18T09:50:12.353164+00:00", "type": "success", "payload": null, "strength": 0.95, "weight": 0.975, "provenance": []}}
