@@ -103,6 +103,55 @@ class PolicyEnforcer:
             expected = self.trust_store.expected_trust(tool_name, action)
             conf = self.trust_store.confidence(tool_name, action)
 
+            # Use AuthorityEngine to make a deterministic, explainable decision
+            try:
+                from trustcalc.authority.engine import AuthorityEngine
+                ae = AuthorityEngine()
+                # delegation depth and provenance warnings may be passed in arguments
+                delegation_depth = int(arguments.get("delegation_depth", 0))
+                provenance_warnings = arguments.get("provenance_warnings", None)
+                trajectory_features = arguments.get("trajectory_features", None)
+
+                auth_dec = ae.decide(
+                    subject=tool_name,
+                    action=action,
+                    expected=expected,
+                    confidence=conf,
+                    risk=risk,
+                    delegation_depth=delegation_depth,
+                    provenance_warnings=provenance_warnings,
+                    trajectory_features=trajectory_features,
+                )
+
+                # Map AuthorityDecision -> Policy Decision
+                if auth_dec.decision == "ALLOW":
+                    return Decision.allow(
+                        explanation=f"Allowed by AuthorityEngine: {auth_dec.reason}",
+                        trust=expected,
+                        confidence=conf,
+                        authority=auth_dec.decision,
+                        authority_reason=auth_dec.reason,
+                    )
+                if auth_dec.decision == "VERIFY":
+                    return Decision.indeterminate(
+                        explanation=f"Verification required by AuthorityEngine: {auth_dec.reason}",
+                        trust=expected,
+                        confidence=conf,
+                        authority=auth_dec.decision,
+                        authority_reason=auth_dec.reason,
+                    )
+                # For other cases prefer conservative behavior
+                return Decision.deny(
+                    explanation=f"Authority decision: {auth_dec.decision} - {auth_dec.reason}",
+                    trust=expected,
+                    confidence=conf,
+                    authority=auth_dec.decision,
+                    authority_reason=auth_dec.reason,
+                )
+            except Exception:
+                # fallback to legacy numerical thresholds if anything goes wrong
+                pass
+
             # Simple decision rules combining trust, confidence and risk
             if risk == 'high':
                 if expected < self.high_risk_threshold:

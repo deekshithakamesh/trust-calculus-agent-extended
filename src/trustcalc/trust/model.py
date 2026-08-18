@@ -73,16 +73,13 @@ class TrustStore:
             rec.beta += 1.0
         rec.last_update = now_ts()
 
-    def record_evidence(self, subject: str, action: str, evidence) -> None:
-        """Record a rich Evidence object. The evidence object is expected to provide:
-        - .weight (float): positive weight
-        - .type (str): 'success'|'failure'|'anomaly'|'recommendation' etc.
-        - .provenance (Iterable[str]) optional
+    def record_evidence(self, subject: str, action: str, evidence, provenance_graph=None, existing_evidence_ids: list | None = None) -> None:
+        """Record a rich Evidence object.
 
-        This method maps evidence -> fractional updates to the Beta counts.
-        The implementation is intentionally simple: map weight to alpha/beta increments
-        according to evidence.type. Provenance discounting should be applied by callers
-        or by a provenance helper prior to calling this method.
+        Optionally accepts a ProvenanceGraph to discount evidence weight when the evidence
+        shares upstream sources with existing evidence. existing_evidence_ids can be a list
+        of evidence ids already recorded for this subject/action and will be passed to the
+        provenance discounting routine.
         """
         # Avoid direct import cycles by importing the Evidence type lazily
         try:
@@ -99,6 +96,16 @@ class TrustStore:
             weight = float(weight)
         except Exception:
             weight = 1.0
+
+        # Apply provenance discounting if available
+        if provenance_graph is not None:
+            existing = existing_evidence_ids or []
+            try:
+                discount = provenance_graph.discount_factor_for(evidence.id, existing)
+                weight = weight * discount
+            except Exception:
+                # if provenance fails for any reason, conservatively reduce weight
+                weight = weight * 0.5
 
         typ = getattr(evidence, "type", "success")
         rec = self._get_record(subject, action)
