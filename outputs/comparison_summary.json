@@ -1,0 +1,16 @@
+{
+  "attacks": [
+    "DataExfiltrationAttack",
+    "FormattingAttack",
+    "JailbreakAttack",
+    "PrivilegeEscalationAttack",
+    "PromptInjectionAttack",
+    "SynonymAttack",
+    "TimingAttack",
+    "WhitespaceAttack"
+  ],
+  "avg_baseline_leakage": 0.375,
+  "avg_trust_leakage": null,
+  "blocked_count": 8,
+  "attack_count": 8
+}
