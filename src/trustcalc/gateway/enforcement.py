@@ -20,6 +20,9 @@ from trustcalc.policy.decisions import Decision
 from trustcalc.policy.engine import PolicyEngine
 from trustcalc.runtime.execution_context import ExecutionContext
 
+# optional trust model
+from trustcalc.trust.model import TrustStore
+
 
 @dataclass(slots=True)
 class PolicyEnforcer:
@@ -28,9 +31,24 @@ class PolicyEnforcer:
 
     This class performs authorization only.
     It never executes tools.
+
+    The enforcer optionally integrates an uncertainty-aware TrustStore
+    which provides contextual trust and confidence values for subjects
+    (tools) and actions. Decisions can then use trust+confidence+risk
+    to make more nuanced authorization choices.
     """
 
     policy_engine: PolicyEngine
+
+    # Optional trust store for dynamic trust reasoning
+    trust_store: "TrustStore" | None = None
+
+    # Thresholds for demonstration; these may be configured elsewhere
+    high_risk_threshold: float = 0.7
+    medium_risk_threshold: float = 0.5
+
+    # Minimum confidence required to allow high-risk actions without extra confirmation
+    min_confidence_for_high_risk: float = 0.2
 
     # ---------------------------------------------------------
     # Public API
@@ -70,6 +88,55 @@ class PolicyEnforcer:
                         f"Missing capability '{capability}'."
                     )
                 )
+
+        # --------------------------------------------------
+        # Trust-aware capability/risk enforcement
+        # --------------------------------------------------
+
+        # Determine subject (tool) name and action
+        tool_name = getattr(tool, 'name', None) or str(tool)
+        action = arguments.get('action') or context.metadata.get('action') or 'default'
+        risk = arguments.get('risk') or context.metadata.get('risk') or 'medium'
+
+        # If a trust store is available, consult it
+        if self.trust_store is not None:
+            expected = self.trust_store.expected_trust(tool_name, action)
+            conf = self.trust_store.confidence(tool_name, action)
+
+            # Simple decision rules combining trust, confidence and risk
+            if risk == 'high':
+                if expected < self.high_risk_threshold:
+                    return Decision.deny(
+                        explanation=(
+                            f"High-risk action '{action}' denied: trust={expected:.3f} < "
+                            f"threshold={self.high_risk_threshold}"
+                        ),
+                        trust=expected,
+                        confidence=conf,
+                        required=self.high_risk_threshold,
+                    )
+
+                if conf < self.min_confidence_for_high_risk:
+                    return Decision.deny(
+                        explanation=(
+                            f"High-risk action '{action}' denied due to low confidence: {conf:.3f}"
+                        ),
+                        trust=expected,
+                        confidence=conf,
+                        reason='low_confidence',
+                    )
+
+            elif risk == 'medium':
+                if expected < self.medium_risk_threshold:
+                    return Decision.deny(
+                        explanation=(
+                            f"Medium-risk action '{action}' denied: trust={expected:.3f} < "
+                            f"threshold={self.medium_risk_threshold}"
+                        ),
+                        trust=expected,
+                        confidence=conf,
+                        required=self.medium_risk_threshold,
+                    )
 
         # --------------------------------------------------
         # Information-flow enforcement
