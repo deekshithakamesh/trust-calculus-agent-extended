@@ -2,21 +2,21 @@
   "before": {
     "subject": "tool-A",
     "action": "read-public",
-    "alpha": 1.9499999687315892,
+    "alpha": 1.9499999182747554,
     "beta": 1.0,
-    "expected": 0.6610169454542693,
-    "confidence": 0.9432725202096717,
-    "last_update": 1787046612.353113
+    "expected": 0.661016939631243,
+    "confidence": 0.9432725190082076,
+    "last_update": 1787074927.810816
   },
   "before_decision": "ALLOW",
   "after": {
     "subject": "tool-A",
     "action": "write-db",
-    "alpha": 1.9749999881839697,
+    "alpha": 1.9749999872440585,
     "beta": 1.0,
-    "expected": 0.6638655448379239,
-    "confidence": 0.9438621172492402,
-    "last_update": 1787046612.353242
+    "expected": 0.6638655447114988,
+    "confidence": 0.9438621172230142,
+    "last_update": 1787074927.810958
   },
   "after_decision": "RESTRICT"
 }
