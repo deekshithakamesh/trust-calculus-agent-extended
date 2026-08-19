@@ -1,0 +1,5 @@
+case,allowed,denied,latency_ms,explanation
+public_to_public,True,False,0.214,Information flow permitted.
+public_to_secret,True,False,0.0035,Information flow permitted.
+secret_to_secret,True,False,0.0019,Information flow permitted.
+secret_to_public,False,True,0.0017,"Information flow violates confidentiality, integrity, or compartment constraints."

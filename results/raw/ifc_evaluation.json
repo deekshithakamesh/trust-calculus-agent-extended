@@ -1,0 +1,36 @@
+{
+  "evaluation": "Information Flow Control",
+  "cases": 4,
+  "allowed": 3,
+  "denied": 1,
+  "results": [
+    {
+      "case": "public_to_public",
+      "allowed": true,
+      "denied": false,
+      "latency_ms": 0.214,
+      "explanation": "Information flow permitted."
+    },
+    {
+      "case": "public_to_secret",
+      "allowed": true,
+      "denied": false,
+      "latency_ms": 0.0035,
+      "explanation": "Information flow permitted."
+    },
+    {
+      "case": "secret_to_secret",
+      "allowed": true,
+      "denied": false,
+      "latency_ms": 0.0019,
+      "explanation": "Information flow permitted."
+    },
+    {
+      "case": "secret_to_public",
+      "allowed": false,
+      "denied": true,
+      "latency_ms": 0.0017,
+      "explanation": "Information flow violates confidentiality, integrity, or compartment constraints."
+    }
+  ]
+}
