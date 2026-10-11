@@ -2,13 +2,116 @@ Metadata-Version: 2.4
 Name: trust-calculus-agent-extended
 Version: 0.1.0
 Summary: A trust calculus framework for agent security evaluation
-Project-URL: Homepage, https://github.com/your-org/trust-calculus-agent-extended
-Project-URL: Repository, https://github.com/your-org/trust-calculus-agent-extended
-Requires-Python: >=3.9
+Project-URL: Homepage, https://github.com/deekshithakamesh/trust-calculus-agent-extended
+Project-URL: Repository, https://github.com/deekshithakamesh/trust-calculus-agent-extended
+Project-URL: Issues, https://github.com/deekshithakamesh/trust-calculus-agent-extended/issues
+Keywords: agent-security,information-flow,policy-enforcement,taint-tracking
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Requires-Python: >=3.10
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: PyYAML
 Requires-Dist: matplotlib
 Requires-Dist: numpy
 Requires-Dist: pandas
+Provides-Extra: dev
+Requires-Dist: build>=1.2; extra == "dev"
+Requires-Dist: pytest>=8; extra == "dev"
 Dynamic: license-file
+
+# TrustCalc
+
+TrustCalc is a Python SDK for enforcing information-flow, capability, and
+policy controls around agent tool execution. It combines security labels,
+taint tracking, provenance, a policy engine, and an auditable tool gateway.
+
+## Installation
+
+```bash
+python -m pip install trust-calculus-agent-extended
+```
+
+For local development:
+
+```bash
+git clone https://github.com/deekshithakamesh/trust-calculus-agent-extended.git
+cd trust-calculus-agent-extended
+python -m pip install -e '.[dev]'
+python -m pytest -q
+```
+
+## Quick start
+
+```python
+from trustcalc import (
+    ExecutionContext,
+    GatewayValidator,
+    PUBLIC_LABEL,
+    PolicyEngine,
+    PolicyEnforcer,
+    TaintTracker,
+    ToolGateway,
+    ToolRegistry,
+)
+
+tracker = TaintTracker()
+message = tracker.wrap("hello", PUBLIC_LABEL, name="message")
+
+registry = ToolRegistry()
+gateway = ToolGateway(
+    registry=registry,
+    validator=GatewayValidator(),
+    enforcer=PolicyEnforcer(PolicyEngine()),
+)
+
+context = ExecutionContext(
+    labels={"source": message.label, "destination": PUBLIC_LABEL},
+)
+decision = gateway.authorize("my-tool", {}, context)
+assert decision.denied  # The tool is not registered.
+```
+
+Most applications register concrete `Tool` implementations and call
+`ToolGateway.execute(...)`. Authorization, argument validation, information
+flow checks, and audit events are then applied consistently at the boundary.
+
+## Core concepts
+
+- `SecurityLabel` models integrity, confidentiality, and compartments.
+- `TrustedValue` couples a value to its label and provenance.
+- `TaintTracker` wraps values, propagates labels, and records lineage.
+- `PolicyEngine` evaluates declarative rules and returns immutable `Decision`
+  objects rather than bare booleans.
+- `ToolGateway` is the policy enforcement point for tool execution.
+- `ExecutionContext` carries capabilities, labels, identity, and metadata.
+
+The stable top-level API is exported from `trustcalc`; lower-level modules are
+available for advanced integrations.
+
+## Documentation and examples
+
+- [Architecture](docs/architecture.md)
+- [SDK API reference](docs/sdk_api.md)
+- [Evaluation evidence and scoring](artifacts/sdk-evidence/report.md)
+- [Policy authoring guide](docs/policy_authoring_guide.md)
+- [Threat model](docs/design/threat_model.md)
+- Runnable examples are in `examples/`
+
+## Project status
+
+TrustCalc is currently an early SDK release (`0.1.x`). The public Python API
+is usable, but consumers should expect API refinement before a `1.0.0` release.
+Security-sensitive deployments should review the policy configuration and
+threat model for their environment.
+
+## License
+
+See [LICENSE](LICENSE).

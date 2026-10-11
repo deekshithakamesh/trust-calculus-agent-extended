@@ -172,3 +172,11 @@ def test_get_taint_returns_trusted_value():
 
     assert isinstance(value, TrustedValue)
     assert value.value == "payload"
+
+
+def test_flow_check_denies_invalid_inputs_explicitly():
+    tracker = TaintTracker()
+    source = tracker.wrap("payload", PUBLIC_LABEL)
+
+    assert not tracker.flow_check(object(), PUBLIC_LABEL)
+    assert not tracker.flow_check(source, object())

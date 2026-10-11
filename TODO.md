@@ -24,4 +24,4 @@
 ## Layer 5 — Improvements
 - [x] Improve `mediator` with full flow/policy integration
 - [x] Add provenance integrity checks (`ProvenanceGraph.verify_integrity`)
-- [ ] Harden `TaintTracker` flow_check with explicit deny
+- [x] Harden `TaintTracker` flow_check with explicit deny

@@ -542,6 +542,13 @@ class TaintTracker:
         Uses the lattice ordering.
         """
 
-        return source.label.can_flow_to(
-            destination_label
-        )
+        if not isinstance(source, TrustedValue):
+            return False
+
+        if not isinstance(destination_label, SecurityLabel):
+            return False
+
+        if not source.label.can_flow_to(destination_label):
+            return False
+
+        return True

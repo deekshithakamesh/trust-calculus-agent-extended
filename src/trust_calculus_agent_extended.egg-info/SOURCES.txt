@@ -74,9 +74,13 @@ src/trustcalc/sidechannels/__init__.py
 src/trustcalc/sidechannels/canonicalizer.py
 src/trustcalc/sidechannels/decoder.py
 src/trustcalc/sidechannels/encoder.py
+src/trustcalc/sidechannels/formatting_channel.py
 src/trustcalc/sidechannels/leakage_estimator.py
 src/trustcalc/sidechannels/metrics.py
 src/trustcalc/sidechannels/mitigations.py
+src/trustcalc/sidechannels/synonym_channel.py
+src/trustcalc/sidechannels/timing_channel.py
+src/trustcalc/sidechannels/whitespace_channel.py
 src/trustcalc/sidechannels/channels/formatting_channel.py
 src/trustcalc/sidechannels/channels/synonym_channel.py
 src/trustcalc/sidechannels/channels/timing_channel.py
