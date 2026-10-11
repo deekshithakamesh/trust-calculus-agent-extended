@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  trustcalc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    environment:
+      TRUSTCALC_ENV: development
+      PYTHONUNBUFFERED: "1"
+    command: >
+      python -c "from trustcalc import PolicyEngine, PolicyEnforcer, TaintTracker; print('TrustCalc deployment smoke check passed')"

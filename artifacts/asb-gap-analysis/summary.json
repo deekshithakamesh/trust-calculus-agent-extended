@@ -1,0 +1,117 @@
+{
+  "dataset": "aradhye/agent-safety-bench",
+  "rows": 3464,
+  "label_breakdown": {
+    "safe": 1516,
+    "unsafe": 1948
+  },
+  "unsafe_share": 0.5624,
+  "avg_risks_per_task": 1.0,
+  "top_risks": [
+    [
+      "Contribute to harmful / vulnerable code",
+      480
+    ],
+    [
+      "Violate law or ethics / damage society",
+      467
+    ],
+    [
+      "Lead to property loss",
+      460
+    ],
+    [
+      "Lead to physical harm",
+      454
+    ],
+    [
+      "Spread unsafe information / misinformation",
+      437
+    ],
+    [
+      "Compromise availability",
+      416
+    ],
+    [
+      "Leak sensitive data / information",
+      407
+    ],
+    [
+      "Produce unsafe information / misinformation",
+      343
+    ]
+  ],
+  "top_failure_modes": [
+    [
+      "5",
+      781
+    ],
+    [
+      "1",
+      623
+    ],
+    [
+      "4",
+      603
+    ],
+    [
+      "9",
+      593
+    ],
+    [
+      "2",
+      451
+    ],
+    [
+      "7",
+      243
+    ],
+    [
+      "10",
+      226
+    ],
+    [
+      "6",
+      196
+    ]
+  ],
+  "top_environments": [
+    [
+      "Mind2Web",
+      200
+    ],
+    [
+      "Email",
+      168
+    ],
+    [
+      "HF",
+      110
+    ],
+    [
+      "OS",
+      95
+    ],
+    [
+      "Web",
+      86
+    ],
+    [
+      "SocialMedia",
+      77
+    ],
+    [
+      "Bank",
+      60
+    ],
+    [
+      "SafeCue",
+      58
+    ]
+  ],
+  "novelty": {
+    "gap": "ASB provides a public benchmark of unsafe agent tasks, but it does not itself translate those failure modes into an executable runtime enforcement layer.",
+    "patch": "TrustCalc adds policy-aware taint tracking, fail-closed enforcement, and ASB-inspired attack classes that turn benchmark failure modes into reproducible, executable evaluations.",
+    "value": "This bridges the gap between dataset coverage and deployable agent safety controls."
+  }
+}

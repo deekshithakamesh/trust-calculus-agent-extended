@@ -7,12 +7,28 @@ name = "trust-calculus-agent-extended"
 version = "0.1.0"
 description = "A trust calculus framework for agent security evaluation"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = ["PyYAML", "matplotlib", "numpy", "pandas"]
+keywords = ["agent-security", "information-flow", "policy-enforcement", "taint-tracking"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
+
+[project.optional-dependencies]
+dev = ["build>=1.2", "pytest>=8"]
 
 [project.urls]
-Homepage = "https://github.com/your-org/trust-calculus-agent-extended"
-Repository = "https://github.com/your-org/trust-calculus-agent-extended"
+Homepage = "https://github.com/deekshithakamesh/trust-calculus-agent-extended"
+Repository = "https://github.com/deekshithakamesh/trust-calculus-agent-extended"
+Issues = "https://github.com/deekshithakamesh/trust-calculus-agent-extended/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

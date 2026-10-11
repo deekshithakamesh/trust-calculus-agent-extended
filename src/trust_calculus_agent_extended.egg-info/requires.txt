@@ -2,3 +2,7 @@ PyYAML
 matplotlib
 numpy
 pandas
+
+[dev]
+build>=1.2
+pytest>=8
