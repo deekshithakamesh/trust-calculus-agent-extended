@@ -1,0 +1,32 @@
+{
+  "training_dataset_size": 24,
+  "train_size": 16,
+  "test_size": 8,
+  "model": "mlp_classifier",
+  "epochs": 26,
+  "final_training_loss": 0.004939544082827717,
+  "final_validation_loss": 1.0,
+  "auroc": 1.0,
+  "auprc": 1.0,
+  "comparison_matrix": {
+    "asb_dataset": {
+      "tasks": 3464,
+      "unsafe": 1948,
+      "safe": 1516,
+      "unsafe_share": 0.5624
+    },
+    "trustcalc_benchmark": {
+      "tasks": 15,
+      "successful": 3,
+      "blocked": 12,
+      "block_rate": 0.8,
+      "security_score": 78.0
+    },
+    "trained_gate_model": {
+      "auroc": 1.0,
+      "auprc": 1.0,
+      "classifier": "mlp_classifier",
+      "epochs": 26
+    }
+  }
+}

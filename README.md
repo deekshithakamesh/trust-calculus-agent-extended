@@ -72,6 +72,7 @@ available for advanced integrations.
 - [Architecture](docs/architecture.md)
 - [SDK API reference](docs/sdk_api.md)
 - [Evaluation evidence and scoring](artifacts/sdk-evidence/report.md)
+- [Advanced review graphs](artifacts/advanced-evidence/auroc_curve.png)
 - [ASB gap analysis](artifacts/asb-gap-analysis/report.md)
 - [Deployment readiness](docs/deployment_readiness.md)
 - [Final report draft](docs/final_report.md)
