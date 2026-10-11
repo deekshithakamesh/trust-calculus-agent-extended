@@ -1,0 +1,11 @@
+{
+  "model": "policy_gate_mlp",
+  "auroc": 1.0,
+  "auprc": 1.0,
+  "epochs": 26,
+  "security_score": 78.0,
+  "trust_score": 62.400000000000006,
+  "runtime_block_rate": 0.8,
+  "runtime_success_rate": 0.2,
+  "top_level_output_dir": "/Users/deekshithakamesh/Documents/GitHub/trust-calculus-agent-extended.worktrees/greeting-response-0dbd28bc/artifacts/review-figures"
+}

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   trustcalc:
     build:
@@ -10,4 +8,4 @@ services:
       TRUSTCALC_ENV: development
       PYTHONUNBUFFERED: "1"
     command: >
-      python -c "from trustcalc import PolicyEngine, PolicyEnforcer, TaintTracker; print('TrustCalc deployment smoke check passed')"
+      sh -c "python scripts/local_ai_smoke_test.py && python benchmarks/generate_professional_review_figures.py"

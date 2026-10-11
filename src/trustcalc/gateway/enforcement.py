@@ -122,7 +122,10 @@ class PolicyEnforcer:
             return False
 
         if hasattr(capabilities, "allows"):
-            return capabilities.allows(capability)
+            try:
+                return capabilities.allows("tool", capability)
+            except TypeError:
+                return capability in capabilities
 
         return capability in capabilities
 
