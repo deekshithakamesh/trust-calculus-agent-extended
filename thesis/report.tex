@@ -1,0 +1,40 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{hyperref}
+\geometry{margin=1in}
+
+\title{TrustCalc: A Unified Benchmark-to-Execution Safety Framework for Agent Systems}
+\author{TrustCalc Project Team}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Abstract}
+This report documents a beta-ready Python SDK for enforcing information-flow control, capability restrictions, and policy-based governance around tool-using agents. The work connects benchmark-driven unsafe behavior analysis with an executable runtime enforcement layer so that adversarial scenarios are both evaluated and blocked in one framework.
+
+\section{Motivation}
+Recent agent benchmarks such as Agent Safety Bench (ASB) identify a broad class of unsafe behaviors, including prompt injection, data leakage, and privilege misuse. However, benchmark data alone does not enforce runtime safety. This project addresses that gap by translating benchmark failure modes into executable attack cases and by enforcing fail-closed rules in the trust calculus runtime.
+
+\section{Contributions}
+\begin{itemize}
+    \item Public Python SDK and stable top-level API.
+    \item Taint tracking, provenance, and label-based enforcement.
+    \item Policy engine and fail-closed gateway authorization.
+    \item ASB-inspired attack families compatible with the TrustCalc runtime.
+    \item Benchmark evidence and metric generation for review and presentation.
+    \item Deployment-readiness documentation and local deployment scaffold.
+\end{itemize}
+
+\section{Evaluation summary}
+The project uses benchmark evidence from the public ASB dataset and a synthetic TrustCalc evaluation suite.
+
+ASB dataset size: 3464 tasks; 1948 unsafe and 1516 safe.\newline
+TrustCalc evaluation: 15 attack scenarios with 12 blocked and 3 successful.\newline
+Security score: 78.0; trust score: 62.4.
+
+\section{Status}
+This report is intended to be a guide-ready final report for review. Formal journal submission proof and official institutional acceptance records are outside the repository and must be obtained through the external submission workflow.
+
+\end{document}

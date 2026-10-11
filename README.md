@@ -72,6 +72,11 @@ available for advanced integrations.
 - [Architecture](docs/architecture.md)
 - [SDK API reference](docs/sdk_api.md)
 - [Evaluation evidence and scoring](artifacts/sdk-evidence/report.md)
+- [ASB gap analysis](artifacts/asb-gap-analysis/report.md)
+- [Deployment readiness](docs/deployment_readiness.md)
+- [Final report draft](docs/final_report.md)
+- [Similarity report](docs/plagiarism_report.md)
+- [Journal submission readiness](docs/journal_submission_readiness.md)
 - [Policy authoring guide](docs/policy_authoring_guide.md)
 - [Threat model](docs/design/threat_model.md)
 - Runnable examples are in `examples/`
