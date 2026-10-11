@@ -21,6 +21,7 @@ src/trustcalc/analysis/report.py
 src/trustcalc/analysis/statistics.py
 src/trustcalc/analysis/visualization.py
 src/trustcalc/attacks/__init__.py
+src/trustcalc/attacks/asb.py
 src/trustcalc/attacks/base.py
 src/trustcalc/attacks/data_exfiltration.py
 src/trustcalc/attacks/formatting_attack.py

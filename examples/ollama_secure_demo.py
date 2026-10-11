@@ -14,6 +14,7 @@ an enforcement boundary before any sensitive or external tool is allowed.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -45,8 +46,10 @@ from trustcalc.policy.capabilities import Capability, CapabilityScope, Capabilit
 SAFE_LOCAL_ROOT = ROOT / "examples" / "demo_workspace"
 SAFE_LOCAL_ROOT.mkdir(parents=True, exist_ok=True)
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "llama3:latest"
+LLM_PROVIDER = os.getenv("TRUSTCALC_LLM_PROVIDER", "ollama").lower()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
+MODEL_NAME = OPENAI_MODEL if LLM_PROVIDER == "openai" else os.getenv("OLLAMA_MODEL", "llama3:latest")
 
 
 class LocalFileTool(Tool):
@@ -189,7 +192,18 @@ def risk_profile(prompt: str) -> dict[str, Any]:
 
 
 def classify_tool_from_prompt(prompt: str) -> tuple[str, dict[str, Any]]:
-    lowered = prompt.lower()
+    lowered = prompt.lower().strip()
+    if not lowered:
+        return "chat", {}
+
+    safe_chat_phrases = [
+        "hi", "hello", "hey", "good morning", "good evening", "thanks", "thank you",
+        "how are you", "what can you do", "can you help", "who are you", "what is your name",
+        "tell me about yourself", "can you explain", "please explain", "what is trustcalc",
+        "safe", "hello there",
+    ]
+    if lowered in safe_chat_phrases or any(phrase in lowered for phrase in safe_chat_phrases):
+        return "chat", {}
 
     if re.search(r"(read|open|show|display)\s+(file|document|note|log|workspace)", lowered):
         return "local_file", {"operation": "read", "path": "demo_notes.txt"}
@@ -204,7 +218,7 @@ def classify_tool_from_prompt(prompt: str) -> tuple[str, dict[str, Any]]:
     if re.search(r"(shell|run command|execute|terminal)", lowered):
         return "shell_command", {"command": "echo safe demo"}
 
-    return "local_file", {"operation": "read", "path": "demo_notes.txt"}
+    return "chat", {}
 
 
 def build_context(prompt: str, tool_name: str) -> ExecutionContext:
@@ -252,6 +266,45 @@ def ollama_generate(prompt: str) -> str:
     return str(data)
 
 
+def openai_generate(prompt: str) -> str:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY is not set. Export it before running the demo with TRUSTCALC_LLM_PROVIDER=openai."
+        )
+
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise RuntimeError(
+            "OpenAI support is not installed. Install it with: pip install openai"
+        ) from exc
+
+    client = OpenAI(api_key=api_key)
+    response = client.responses.create(
+        model=MODEL_NAME,
+        input=prompt,
+    )
+    if hasattr(response, "output_text") and response.output_text:
+        return str(response.output_text).strip()
+    if hasattr(response, "output"):
+        parts = []
+        for item in response.output:
+            if hasattr(item, "content"):
+                for content in item.content:
+                    if hasattr(content, "text"):
+                        parts.append(content.text)
+        if parts:
+            return "\n".join(parts).strip()
+    return json.dumps(response.model_dump() if hasattr(response, "model_dump") else str(response), indent=2)
+
+
+def generate_llm_output(prompt: str) -> str:
+    if LLM_PROVIDER == "openai":
+        return openai_generate(prompt)
+    return ollama_generate(prompt)
+
+
 def to_jsonable(obj: Any) -> Any:
     if isinstance(obj, dict):
         return {str(k): to_jsonable(v) for k, v in obj.items()}
@@ -275,15 +328,46 @@ def secure_decision_trace(prompt: str) -> dict[str, Any]:
     profile = risk_profile(prompt)
     steps.append(SecurityTraceStep("risk_analysis", (time.perf_counter_ns() - start) / 1_000_000, {"profile": profile}))
 
+    tool_name, tool_args = classify_tool_from_prompt(prompt)
+    if tool_name == "chat":
+        safe_response = "Hello! I can help answer questions and explain the security flow. I will not perform unsafe actions unless you explicitly request a tool-backed operation and the policy allows it."
+        return {
+            "model": MODEL_NAME,
+            "prompt": prompt,
+            "tool_candidate": "chat",
+            "llm_output": safe_response,
+            "profile": profile,
+            "decision": {
+                "effect": "allow",
+                "allowed": True,
+                "matched_rules": ["chat.safe"],
+                "violated_rules": [],
+                "missing_capabilities": [],
+                "explanation": "Safe conversational prompt; no privileged tool action requested.",
+                "metadata": {"boundary": "local sandbox only"},
+            },
+            "result": {
+                "allowed": True,
+                "reason": "Safe conversational prompt.",
+                "tool": "chat",
+                "policy_boundary": "local sandbox only",
+                "response": safe_response,
+            },
+            "trace": [
+                {"step": "risk_analysis", "ms": round((time.perf_counter_ns() - start) / 1_000_000, 3), "details": {"profile": profile}},
+                {"step": "tool_classification", "ms": 0.0, "details": {"tool": "chat", "args": tool_args}},
+                {"step": "policy_decision", "ms": 0.0, "details": {"decision": "allow"}},
+            ],
+        }
+
     start = time.perf_counter_ns()
     wrapped_prompt = tracker.wrap(prompt, SECRET_LABEL if profile["sensitivity_score"] > 0 else PUBLIC_LABEL, name="user_prompt")
     steps.append(SecurityTraceStep("label_assignment", (time.perf_counter_ns() - start) / 1_000_000, {"label": str(wrapped_prompt.label)}))
 
     start = time.perf_counter_ns()
-    llm_output = ollama_generate(prompt)
+    llm_output = generate_llm_output(prompt)
     steps.append(SecurityTraceStep("llm_generation", (time.perf_counter_ns() - start) / 1_000_000, {"llm_output": llm_output[:400]}))
 
-    tool_name, tool_args = classify_tool_from_prompt(prompt)
     start = time.perf_counter_ns()
     context = build_context(prompt, tool_name)
     steps.append(SecurityTraceStep("context_build", (time.perf_counter_ns() - start) / 1_000_000, {"tool": tool_name, "labels": dict(context.labels)}))
@@ -328,7 +412,8 @@ def main() -> None:
         "Search the web for public information on the latest AI news.",
     ]
 
-    print("TrustCalc + Ollama local demo")
+    provider_label = "OpenAI" if LLM_PROVIDER == "openai" else "Ollama"
+    print(f"TrustCalc + {provider_label} demo")
     print(f"Model: {MODEL_NAME}")
     print("Local sandbox policy: deny external actions by default\n")
 

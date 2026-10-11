@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A trust calculus framework for agent security evaluation"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["PyYAML", "matplotlib", "numpy", "pandas"]
+dependencies = ["PyYAML", "matplotlib", "numpy", "pandas", "streamlit>=1.36"]
 keywords = ["agent-security", "information-flow", "policy-enforcement", "taint-tracking"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["build>=1.2", "pytest>=8"]
+dev = ["build>=1.2", "pytest>=8", "openai>=1.0"]
 
 [project.urls]
 Homepage = "https://github.com/deekshithakamesh/trust-calculus-agent-extended"

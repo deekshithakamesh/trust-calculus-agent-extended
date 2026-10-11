@@ -22,9 +22,11 @@ Requires-Dist: PyYAML
 Requires-Dist: matplotlib
 Requires-Dist: numpy
 Requires-Dist: pandas
+Requires-Dist: streamlit>=1.36
 Provides-Extra: dev
 Requires-Dist: build>=1.2; extra == "dev"
 Requires-Dist: pytest>=8; extra == "dev"
+Requires-Dist: openai>=1.0; extra == "dev"
 Dynamic: license-file
 
 # TrustCalc
@@ -101,9 +103,36 @@ available for advanced integrations.
 - [Architecture](docs/architecture.md)
 - [SDK API reference](docs/sdk_api.md)
 - [Evaluation evidence and scoring](artifacts/sdk-evidence/report.md)
+- [Advanced review graphs](artifacts/advanced-evidence/auroc_curve.png)
+- [ASB gap analysis](artifacts/asb-gap-analysis/report.md)
+- [Deployment readiness](docs/deployment_readiness.md)
+- [Final report draft](docs/final_report.md)
+- [Similarity report](docs/plagiarism_report.md)
+- [Journal submission readiness](docs/journal_submission_readiness.md)
 - [Policy authoring guide](docs/policy_authoring_guide.md)
 - [Threat model](docs/design/threat_model.md)
 - Runnable examples are in `examples/`
+
+## ASB-inspired attack families
+
+The project also includes ASB-style benchmark scenarios for the most common
+agent security failure modes:
+
+- direct prompt injection
+- observation prompt injection
+- memory poisoning
+- plan-of-thought backdoor execution
+- mixed multi-stage attacks
+
+These are exposed through the `trustcalc.attacks` package, including
+`DirectPromptInjectionAttack`, `ObservationPromptInjectionAttack`,
+`MemoryPoisoningAttack`, `PlanOfThoughtBackdoorAttack`, and `MixedASBAttack`.
+
+## ASB dataset gap analysis
+
+The project additionally includes a public benchmark-grounded analysis using the
+Hugging Face dataset `aradhye/agent-safety-bench`, with charts and a short gap
+analysis under `artifacts/asb-gap-analysis/`.
 
 ## Project status
 

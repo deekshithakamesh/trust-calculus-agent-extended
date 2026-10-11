@@ -1,166 +1,61 @@
-"""
-Streamlit UI for Trust Calculus experiments
+"""Chat-style TrustCalc demo UI with conversation memory.
 
-Usage:
-  1. Install Streamlit: pip install streamlit
-  2. From the repo root run:
-       PYTHONPATH=src .venv/bin/python -m streamlit run scripts/streamlit_ui.py
-
-The app runs a simple end-to-end demo using the FormattingChannel, PolicyEnforcer,
-and EvaluationRunner, and shows the encoded message, policy decision, and
-numeric leakage metrics. Results can be downloaded as JSON.
+This version keeps a running conversation history so the assistant behaves more like
+an actual AI agent while still enforcing the TrustCalc policy boundary.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import sys
-from typing import Any
+from pathlib import Path
 
-try:
-    import streamlit as st
-except Exception as exc:  # pragma: no cover - runtime helper
-    raise RuntimeError(
-        "streamlit is not installed. Install with: pip install streamlit"
-    ) from exc
+import streamlit as st
 
-# Ensure project src/ is importable when run from repo root
-ROOT = os.path.dirname(os.path.dirname(__file__))
-SRC = os.path.join(ROOT, "src")
-if SRC not in sys.path:
-    sys.path.insert(0, SRC)
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
-# Imports from the project
-from trustcalc.policy.engine import PolicyEngine
-from trustcalc.gateway.enforcement import PolicyEnforcer
-from trustcalc.runtime.execution_context import ExecutionContext
-from trustcalc.core.labels import make_secret, make_public
-from trustcalc.sidechannels.channels.formatting_channel import (
-    FormattingChannel,
-    FormattingStrategy,
-)
-from trustcalc.evaluation.runner import EvaluationRunner
+from examples.ollama_secure_demo import LLM_PROVIDER, secure_decision_trace
 
-# ---------------------------------------------------------------------------
-# Streamlit layout
-# ---------------------------------------------------------------------------
-st.set_page_config(page_title="Trust Calculus — Demo UI", layout="wide")
-st.title("Trust Calculus — End-to-end Demo")
-st.caption("Encode a secret into a carrier using a formatting covert channel, run gateway enforcement, and show leakage metrics.")
+st.set_page_config(page_title="TrustCalc Safety Console", layout="wide")
 
-with st.sidebar:
-    st.header("Experiment configuration")
-    secret = st.text_input("Secret to embed", value="TOP_SECRET_DATA")
-    message = st.text_area(
-        "Carrier message",
-        value=(
-            "This is a public carrier message that has many words for encoding "
-            "purposes so we can hide bits inside formatting. Add more words to increase capacity."
-        ),
-        height=160,
-    )
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Hello. I can help with safe, local-only questions and keep the conversation focused within the approved scope."}
+    ]
 
-    strategy = st.selectbox(
-        "Formatting strategy",
-        options=[s.value for s in FormattingStrategy],
-        index=0,
-    )
+st.title("TrustCalc Safety Console")
+st.caption("Local chatbot demo with policy-aware safety filtering")
 
-    destination = st.selectbox("Destination label", ["public", "secret"], index=0)
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
-    duration_seconds = st.number_input("Duration (seconds)", value=2.0, min_value=0.1)
+prompt = st.chat_input("How can I help you today?")
+if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    try:
+        result = secure_decision_trace(prompt)
+    except RuntimeError as exc:
+        st.error(str(exc))
+        if LLM_PROVIDER == "openai":
+            st.info("Set OPENAI_API_KEY and run with TRUSTCALC_LLM_PROVIDER=openai")
+        else:
+            st.info("Start Ollama with: ollama serve")
+        st.stop()
 
-    mitigation_before = st.slider("Mitigation before (example)", 0.0, 1.0, 1.0)
-    mitigation_after = st.slider("Mitigation after (example)", 0.0, 1.0, 0.2)
-
-    run_button = st.button("Run experiment")
-
-# ---------------------------------------------------------------------------
-# Backend wiring
-# ---------------------------------------------------------------------------
-engine = PolicyEngine()
-enforcer = PolicyEnforcer(policy_engine=engine)
-runner = EvaluationRunner()
-channel = FormattingChannel()
-channel.strategy = FormattingStrategy(strategy)
-
-# Helper to run the experiment
-def run_experiment(secret: str, message: str, destination_label_name: str) -> dict[str, Any]:
-    source_label = make_secret()
-    destination_label = make_public() if destination_label_name == "public" else source_label
-
-    context = ExecutionContext(user_id="web-user", labels={"source": source_label, "destination": destination_label})
-
-    decision = enforcer.authorize(object(), {}, context)
-
-    encoded = channel.encode(secret, message)
-    transmitted_bits = channel.encoder.bit_length(secret)
-    # decode what is recoverable from the encoded message
-    recovered = channel.decode(encoded)
-    recovered_bits = channel.encoder.bit_length(recovered)
-
-    result: dict[str, Any] = {
-        "decision": decision.to_dict(),
-        "blocked": decision.denied,
-        "encoded": encoded,
-        "transmitted_bits": transmitted_bits,
-        "recovered": recovered,
-        "recovered_bits": recovered_bits,
-    }
-
-    if not decision.denied:
-        exp = runner.run_experiment(
-            attack_name=f"formatting-channel-{destination_label_name}",
-            transmitted_bits=transmitted_bits,
-            recovered_bits=recovered_bits,
-            duration_seconds=duration_seconds,
-            mitigation_before=mitigation_before,
-            mitigation_after=mitigation_after,
+    allowed = bool(result["result"].get("allowed", False))
+    tool = result["tool_candidate"]
+    if allowed:
+        assistant_reply = (
+            "I can help with that in a safe, local-only way."
+            if tool == "chat"
+            else "I can help with that within the local sandbox policy."
         )
-        result["experiment"] = exp
+    else:
+        assistant_reply = "I’m not able to assist with that request. It would move outside the safe local boundary, and I’m designed to stay within the approved operating scope."
 
-    return result
-
-# ---------------------------------------------------------------------------
-# Run and display
-# ---------------------------------------------------------------------------
-if run_button:
-    with st.spinner("Running experiment..."):
-        try:
-            channel.strategy = FormattingStrategy(strategy)
-            out = run_experiment(secret, message, destination)
-        except Exception as exc:
-            st.exception(exc)
-            st.stop()
-
-    # Show policy decision
-    st.subheader("Policy decision")
-    decision = out.get("decision", {})
-    st.json(decision)
-
-    st.subheader("Encoded message (full)")
-    st.code(out["encoded"])
-
-    cols = st.columns(4)
-    cols[0].metric("Transmitted bits", out["transmitted_bits"])
-    cols[1].metric("Recovered bits", out["recovered_bits"])
-    leak = (out["recovered_bits"] / out["transmitted_bits"]) if out["transmitted_bits"] else 0.0
-    cols[2].metric("Bit leakage", f"{leak:.3f}")
-    cols[3].metric("Blocked", str(out["blocked"]))
-
-    if "experiment" in out:
-        st.subheader("Experiment metrics")
-        st.json(out["experiment"]) 
-
-    # Offer download
-    st.subheader("Download result")
-    st.download_button(
-        "Download result as JSON",
-        data=json.dumps(out, indent=2),
-        file_name="trustcalc_experiment_result.json",
-        mime="application/json",
-    )
-
-else:
-    st.info("Configure experiment in the sidebar and click 'Run experiment' to execute.")
+    st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+    st.rerun()

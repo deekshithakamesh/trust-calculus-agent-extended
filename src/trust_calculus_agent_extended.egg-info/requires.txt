@@ -2,7 +2,9 @@ PyYAML
 matplotlib
 numpy
 pandas
+streamlit>=1.36
 
 [dev]
 build>=1.2
 pytest>=8
+openai>=1.0
