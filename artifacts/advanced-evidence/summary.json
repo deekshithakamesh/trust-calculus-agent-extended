@@ -1,10 +1,10 @@
 {
-  "training_dataset_size": 24,
-  "train_size": 16,
-  "test_size": 8,
+  "training_dataset_size": 2400,
+  "train_size": 1920,
+  "test_size": 480,
   "model": "mlp_classifier",
-  "epochs": 26,
-  "final_training_loss": 0.004939544082827717,
+  "epochs": 17,
+  "final_training_loss": 0.00014364829384942525,
   "final_validation_loss": 1.0,
   "auroc": 1.0,
   "auprc": 1.0,
@@ -26,7 +26,7 @@
       "auroc": 1.0,
       "auprc": 1.0,
       "classifier": "mlp_classifier",
-      "epochs": 26
+      "epochs": 17
     }
   }
 }

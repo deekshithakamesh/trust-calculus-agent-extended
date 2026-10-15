@@ -330,12 +330,17 @@ def secure_decision_trace(prompt: str) -> dict[str, Any]:
 
     tool_name, tool_args = classify_tool_from_prompt(prompt)
     if tool_name == "chat":
-        safe_response = "Hello! I can help answer questions and explain the security flow. I will not perform unsafe actions unless you explicitly request a tool-backed operation and the policy allows it."
+        try:
+            llm_output = generate_llm_output(prompt)
+        except RuntimeError:
+            llm_output = "Hello. I can help with that."
+
+        llm_output = llm_output.strip() or "Hello. I can help with that."
         return {
             "model": MODEL_NAME,
             "prompt": prompt,
             "tool_candidate": "chat",
-            "llm_output": safe_response,
+            "llm_output": llm_output,
             "profile": profile,
             "decision": {
                 "effect": "allow",
@@ -351,7 +356,7 @@ def secure_decision_trace(prompt: str) -> dict[str, Any]:
                 "reason": "Safe conversational prompt.",
                 "tool": "chat",
                 "policy_boundary": "local sandbox only",
-                "response": safe_response,
+                "response": llm_output,
             },
             "trace": [
                 {"step": "risk_analysis", "ms": round((time.perf_counter_ns() - start) / 1_000_000, 3), "details": {"profile": profile}},

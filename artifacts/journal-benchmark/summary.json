@@ -1,0 +1,31 @@
+{
+  "dataset_rows": 3627,
+  "train_size": 2901,
+  "test_size": 726,
+  "accuracy": 0.509641873278237,
+  "auroc": 0.5277644056270011,
+  "auprc": 0.6369559069989468,
+  "label_balance": {
+    "safe": 1666,
+    "unsafe": 1961
+  },
+  "sources": [
+    "anthropic",
+    "beavertails",
+    "curated",
+    "synthetic-safe-control",
+    "synthetic-unsafe-control"
+  ],
+  "categories": {
+    "benign": 900,
+    "data_exfiltration": 18,
+    "email_web_abuse": 18,
+    "privilege_escalation": 18,
+    "prompt_injection": 18,
+    "public_safety": 1675,
+    "safe": 36,
+    "sensitive_file_access": 18,
+    "shell_misuse": 16,
+    "unsafe": 910
+  }
+}

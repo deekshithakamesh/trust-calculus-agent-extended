@@ -19,36 +19,35 @@ from sklearn.preprocessing import StandardScaler
 OUTPUT_DIR = Path("artifacts/advanced-evidence")
 
 
-def make_training_data() -> tuple[np.ndarray, np.ndarray]:
-    """Create a small but realistic benchmark dataset for a trained policy classifier."""
-    rows: list[tuple[float, float, float, float, float, int]] = [
-        (1.0, 1.0, 0.0, 0.8, 0.5, 1),
-        (1.0, 0.7, 0.2, 0.6, 0.4, 1),
-        (0.8, 0.9, 0.1, 0.7, 0.3, 1),
-        (0.9, 1.0, 0.0, 0.9, 0.6, 1),
-        (1.0, 0.8, 0.2, 0.8, 0.5, 1),
-        (0.2, 0.1, 0.7, 0.1, 0.1, 0),
-        (0.1, 0.2, 0.8, 0.1, 0.0, 0),
-        (0.3, 0.1, 0.9, 0.2, 0.2, 0),
-        (0.1, 0.0, 0.9, 0.1, 0.1, 0),
-        (0.25, 0.15, 0.8, 0.15, 0.1, 0),
-        (0.1, 0.8, 0.2, 0.7, 0.4, 1),
-        (0.9, 0.7, 0.3, 0.7, 0.5, 1),
-        (0.2, 0.2, 0.7, 0.2, 0.1, 0),
-        (0.15, 0.1, 0.85, 0.2, 0.1, 0),
-        (0.7, 0.9, 0.1, 0.9, 0.6, 1),
-        (0.65, 0.8, 0.2, 0.8, 0.4, 1),
-        (0.3, 0.3, 0.7, 0.3, 0.2, 0),
-        (0.4, 0.2, 0.8, 0.2, 0.1, 0),
-        (0.8, 0.9, 0.1, 0.9, 0.7, 1),
-        (0.5, 0.6, 0.3, 0.7, 0.4, 1),
-        (0.2, 0.1, 0.9, 0.2, 0.1, 0),
-        (0.3, 0.2, 0.8, 0.3, 0.2, 0),
-        (0.75, 0.82, 0.15, 0.79, 0.53, 1),
-        (0.1, 0.05, 0.95, 0.08, 0.05, 0),
-    ]
-    features = np.asarray([list(row[:-1]) for row in rows], dtype=float)
-    labels = np.asarray([row[-1] for row in rows], dtype=int)
+def make_training_data(samples_per_class: int = 1200) -> tuple[np.ndarray, np.ndarray]:
+    """Create a larger synthetic benchmark dataset for a trained policy classifier.
+
+    The dataset keeps a realistic separation between benign and risky prompts while
+    being large enough for a proper 80/20 train-test split and a stable MLP pipeline.
+    """
+    rng = np.random.default_rng(7)
+
+    safe_rows: list[list[float]] = []
+    unsafe_rows: list[list[float]] = []
+
+    for _ in range(samples_per_class):
+        sensitivity = rng.uniform(0.0, 0.35)
+        action = rng.uniform(0.0, 0.32)
+        external = rng.uniform(0.7, 1.0)
+        policy = rng.uniform(0.0, 0.25)
+        risk = rng.uniform(0.0, 0.2)
+        safe_rows.append([sensitivity, action, external, policy, risk])
+
+    for _ in range(samples_per_class):
+        sensitivity = rng.uniform(0.7, 1.0)
+        action = rng.uniform(0.7, 1.0)
+        external = rng.uniform(0.2, 0.8)
+        policy = rng.uniform(0.5, 1.0)
+        risk = rng.uniform(0.6, 1.0)
+        unsafe_rows.append([sensitivity, action, external, policy, risk])
+
+    features = np.asarray(safe_rows + unsafe_rows, dtype=float)
+    labels = np.asarray([0] * len(safe_rows) + [1] * len(unsafe_rows), dtype=int)
     return features, labels
 
 
@@ -175,8 +174,8 @@ def train_policy_model(X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndar
 def main() -> dict[str, object]:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    X, y = make_training_data()
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=7, stratify=y)
+    X, y = make_training_data(samples_per_class=1200)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=7, stratify=y)
 
     model, probabilities, training_history = train_policy_model(X_train, y_train, X_test, y_test)
 

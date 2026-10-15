@@ -1,0 +1,18 @@
+{
+  "dataset_rows": 2391,
+  "train_size": 1912,
+  "test_size": 479,
+  "accuracy": 0.5198329853862212,
+  "auroc": 0.5378642135086922,
+  "auprc": 0.6165393913369271,
+  "label_balance": {
+    "safe": 1128,
+    "unsafe": 1263
+  },
+  "sources": [
+    "anthropic",
+    "beavertails",
+    "curated-safe",
+    "curated-unsafe"
+  ]
+}
