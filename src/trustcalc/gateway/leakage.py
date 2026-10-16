@@ -52,7 +52,9 @@ class BudgetedGateway:
     ``reserved_fraction`` sets aside that fraction of the total budget for
     calls marked ``legitimate=True``. Probe calls may use only the remainder;
     legitimate calls may use the full budget. The total transcript leakage
-    remains capped by ``budget``.
+    remains capped by ``budget``. With ``per_caller=True``, each authenticated
+    ``ExecutionContext.user_id`` has an independent knowledge set and budget;
+    cross-caller collusion is outside that accounting model.
     """
 
     gateway: ToolGateway
@@ -61,9 +63,10 @@ class BudgetedGateway:
     reserved_fraction: float = 0.0
     prior: Mapping[LabelKey, float] | None = None
     expose_denial_reasons: bool | None = None
+    per_caller: bool = False
     _keys: tuple[LabelKey, ...] = field(init=False, repr=False)
     _weights: dict[LabelKey, float] = field(init=False, repr=False)
-    _knowledge: dict[str, frozenset[LabelKey]] = field(
+    _knowledge: dict[tuple[str | None, str], frozenset[LabelKey]] = field(
         init=False,
         default_factory=dict,
         repr=False,
@@ -107,16 +110,38 @@ class BudgetedGateway:
             return self.gateway.expose_denial_reasons
         return self.expose_denial_reasons
 
-    def _knowledge_for(self, protected_value_id: str) -> frozenset[LabelKey]:
+    def _state_key(
+        self,
+        context: ExecutionContext | None,
+        protected_value_id: str,
+    ) -> tuple[str | None, str]:
         if not protected_value_id:
             raise ValueError("protected_value_id must not be empty.")
-        if protected_value_id not in self._knowledge:
-            self._knowledge[protected_value_id] = frozenset(self._keys)
-        return self._knowledge[protected_value_id]
+        caller_id = None
+        if self.per_caller:
+            if context is None or not context.user_id:
+                raise ValueError("per-caller budgets require a non-empty user_id.")
+            caller_id = context.user_id
+        return caller_id, protected_value_id
 
-    def spent_bits(self, protected_value_id: str = "default") -> float:
+    def _knowledge_for(
+        self,
+        context: ExecutionContext | None,
+        protected_value_id: str,
+    ) -> tuple[tuple[str | None, str], frozenset[LabelKey]]:
+        state_key = self._state_key(context, protected_value_id)
+        if state_key not in self._knowledge:
+            self._knowledge[state_key] = frozenset(self._keys)
+        return state_key, self._knowledge[state_key]
+
+    def spent_bits(
+        self,
+        protected_value_id: str = "default",
+        *,
+        context: ExecutionContext | None = None,
+    ) -> float:
         """Return transcript leakage for a protected value under its prior."""
-        knowledge = self._knowledge_for(protected_value_id)
+        _, knowledge = self._knowledge_for(context, protected_value_id)
         mass = sum(self._weights[key] for key in knowledge)
         return -math.log2(mass)
 
@@ -167,7 +192,7 @@ class BudgetedGateway:
             return self.gateway.authorize(tool_name, arguments, context)
         self.gateway.validator.validate(tool, arguments)
 
-        knowledge = self._knowledge_for(protected_value_id)
+        state_key, knowledge = self._knowledge_for(context, protected_value_id)
         outcomes: dict[LabelKey, bool] = {}
         decisions: dict[LabelKey, Decision] = {}
         for candidate_key in knowledge:
@@ -183,7 +208,7 @@ class BudgetedGateway:
             outcomes[candidate_key] = decision.allowed
 
         cost = self._worst_case_cost(knowledge, outcomes)
-        spent = self.spent_bits(protected_value_id)
+        spent = self.spent_bits(protected_value_id, context=context)
         if self.budget is not None:
             permitted_budget = self.budget
             if not legitimate:
@@ -198,7 +223,7 @@ class BudgetedGateway:
         updated = frozenset(
             key for key in knowledge if outcomes[key] is observed_outcome
         )
-        self._knowledge[protected_value_id] = updated
+        self._knowledge[state_key] = updated
         self.gateway.audit.record_authorization(tool_name, actual_decision)
         return self._public_decision(actual_decision)
 

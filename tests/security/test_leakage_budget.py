@@ -47,6 +47,7 @@ def _budgeted_gateway(
     *,
     budget=3.0,
     reserved_fraction=0.0,
+    per_caller=False,
 ):
     registry = ToolRegistry()
     registry.register("echo", EchoTool())
@@ -60,11 +61,13 @@ def _budgeted_gateway(
         label_universe=universe,
         budget=budget,
         reserved_fraction=reserved_fraction,
+        per_caller=per_caller,
     )
 
 
-def _context(source, destination_compartments):
+def _context(source, destination_compartments, user_id=None):
     return ExecutionContext(
+        user_id=user_id,
         labels={
             "source": source,
             "destination": SecurityLabel(
@@ -177,3 +180,53 @@ def test_hashable_label_keys_support_unhashable_security_labels():
         confidentiality=Confidentiality.INTERNAL,
         compartments=frozenset({"FIN"}),
     )
+
+
+def test_one_caller_cannot_consume_another_callers_budget():
+    universe = _universe((Confidentiality.INTERNAL,))
+    actual = next(
+        label for label in universe
+        if label.compartments == frozenset({"HR"})
+    )
+    gateway = _budgeted_gateway(universe, budget=1.0, per_caller=True)
+    caller_a = ExecutionContext(user_id="caller-a")
+    caller_b = ExecutionContext(user_id="caller-b")
+
+    first = gateway.authorize(
+        "echo",
+        {},
+        _context(actual, {"FIN"}, user_id=caller_a.user_id),
+        protected_value_id="record-1",
+    )
+    assert first.denied
+    assert gateway.spent_bits(
+        "record-1",
+        context=caller_a,
+    ) == pytest.approx(1.0)
+
+    second_context = _context(actual, {"HR"}, user_id=caller_b.user_id)
+    second = gateway.authorize(
+        "echo",
+        {},
+        second_context,
+        protected_value_id="record-1",
+    )
+    assert second.allowed
+    assert gateway.spent_bits(
+        "record-1",
+        context=caller_a,
+    ) == pytest.approx(1.0)
+    assert gateway.spent_bits(
+        "record-1",
+        context=caller_b,
+    ) == pytest.approx(1.0)
+
+
+def test_per_caller_budget_requires_an_execution_context_user_id():
+    gateway = _budgeted_gateway(
+        _universe((Confidentiality.INTERNAL,)),
+        per_caller=True,
+    )
+
+    with pytest.raises(ValueError, match="require a non-empty user_id"):
+        gateway.spent_bits()
