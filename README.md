@@ -102,6 +102,14 @@ It enumerates 20 labels, seven probing strategies, and six budget settings,
 then writes `evidence/leakage_budget.json`, `evidence/leakage_budget.md`, and
 `evidence/figures/leakage_curve.png`.
 
+Run the denial-feedback probe with:
+
+```bash
+PYTHONPATH=src python scripts/run_denial_probe.py
+```
+
+It writes `evidence/denial_probe.json` and `evidence/denial_probe.md`.
+
 ## Documentation and examples
 
 - [Architecture](docs/architecture.md)

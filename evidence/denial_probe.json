@@ -1,0 +1,23 @@
+{
+  "allow_deny_channel_bits": 1.0,
+  "assumptions": {
+    "prior": "Uniform over the two source labels in this probe.",
+    "request": "Fixed tool arguments and PUBLIC destination.",
+    "scope": "The result measures this allow/deny channel only; it is not a bound for requests whose destination or arguments encode the protected label."
+  },
+  "capability_audit_keeps_full_reason": true,
+  "capability_name_disclosed": false,
+  "denial_message": "Tool call denied by policy.",
+  "observations": [
+    {
+      "allowed": true,
+      "caller_feedback": "Tool call allowed.",
+      "source_label": "PUBLIC"
+    },
+    {
+      "allowed": false,
+      "caller_feedback": "Tool call denied by policy.",
+      "source_label": "SECRET"
+    }
+  ]
+}
