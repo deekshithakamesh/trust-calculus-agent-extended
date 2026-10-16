@@ -47,7 +47,9 @@ class BudgetedGateway:
     The leakage measure is surprisal under ``prior``. With the default
     uniform prior this is ``log2(|universe| / |knowledge_set|)``. Requests
     must be independent of the protected value: their arguments and
-    destination labels must be selected from public information.
+    destination labels must be selected from public information. The formal
+    leakage guarantee documented and tested here is a bound under the uniform
+    prior only; a non-uniform prior produces model-dependent bit values.
 
     ``reserved_fraction`` sets aside that fraction of the total budget for
     calls marked ``legitimate=True``. Probe calls may use only the remainder;

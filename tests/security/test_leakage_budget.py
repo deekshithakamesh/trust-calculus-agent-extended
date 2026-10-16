@@ -48,6 +48,7 @@ def _budgeted_gateway(
     budget=3.0,
     reserved_fraction=0.0,
     per_caller=False,
+    prior=None,
 ):
     registry = ToolRegistry()
     registry.register("echo", EchoTool())
@@ -62,6 +63,7 @@ def _budgeted_gateway(
         budget=budget,
         reserved_fraction=reserved_fraction,
         per_caller=per_caller,
+        prior=prior,
     )
 
 
@@ -265,3 +267,67 @@ def test_budget_refusal_depends_on_transcript_and_public_request_not_secret():
         (True, "Tool call denied by policy.", "Leakage budget exceeded."),
         (True, "Tool call denied by policy.", "Leakage budget exceeded."),
     ]
+
+
+def test_nonuniform_prior_changes_the_reported_leakage_bits():
+    from math import log2
+
+    from trustcalc.gateway.leakage import label_key
+
+    universe = _universe((Confidentiality.INTERNAL,))
+    weights = {
+        label_key(label): (
+            0.7 if not label.compartments else 0.1
+        )
+        for label in universe
+    }
+    actual = next(
+        label for label in universe
+        if label.compartments == frozenset({"HR"})
+    )
+
+    uniform_gateway = _budgeted_gateway(universe, budget=None)
+    weighted_gateway = _budgeted_gateway(
+        universe,
+        budget=None,
+        prior=weights,
+    )
+    uniform_gateway.authorize("echo", {}, _context(actual, {"FIN"}))
+    weighted_gateway.authorize("echo", {}, _context(actual, {"FIN"}))
+
+    assert uniform_gateway.spent_bits() == pytest.approx(1.0)
+    assert weighted_gateway.spent_bits() == pytest.approx(log2(5))
+
+
+def test_nonuniform_prior_uses_its_worst_case_cost_but_uniform_is_the_guarantee():
+    from trustcalc.gateway.leakage import label_key
+
+    universe = _universe((Confidentiality.INTERNAL,))
+    weights = {
+        label_key(label): (0.7 if not label.compartments else 0.1)
+        for label in universe
+    }
+    actual = next(
+        label for label in universe
+        if label.compartments == frozenset({"HR"})
+    )
+    uniform_gateway = _budgeted_gateway(universe, budget=1.0)
+    weighted_gateway = _budgeted_gateway(
+        universe,
+        budget=1.0,
+        prior=weights,
+    )
+
+    uniform_gateway.authorize("echo", {}, _context(actual, {"FIN"}))
+    weighted_result = weighted_gateway.authorize(
+        "echo",
+        {},
+        _context(actual, {"FIN"}),
+    )
+
+    assert uniform_gateway.gateway.audit.history()[-1]["reason"] != "Leakage budget exceeded."
+    assert weighted_result.denied
+    assert weighted_result.explanation == "Tool call denied by policy."
+    assert weighted_gateway.gateway.audit.history()[-1]["reason"] == "Leakage budget exceeded."
+    assert uniform_gateway.spent_bits() == pytest.approx(1.0)
+    assert weighted_gateway.spent_bits() == pytest.approx(0.0)
