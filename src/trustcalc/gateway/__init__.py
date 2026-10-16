@@ -8,10 +8,12 @@ from trustcalc.gateway.exceptions import (
     ToolExecutionError,
 )
 from trustcalc.gateway.gateway import ToolGateway
+from trustcalc.gateway.leakage import BudgetedGateway
 from trustcalc.gateway.validator import GatewayValidator
 
 __all__ = [
     "ToolGateway",
+    "BudgetedGateway",
     "GatewayValidator",
     "PolicyEnforcer",
     "GatewayAudit",

@@ -52,6 +52,8 @@ class ToolGateway:
         default_factory=GatewayAudit
     )
 
+    expose_denial_reasons: bool = False
+
     # ---------------------------------------------------------
     # Public API
     # ---------------------------------------------------------
@@ -72,12 +74,13 @@ class ToolGateway:
         tool = self.registry.get(tool_name)
 
         if tool is None:
-
-            return Decision.deny(
+            decision = Decision.deny(
                 explanation=(
                     f"Unknown tool '{tool_name}'."
                 )
             )
+            self.audit.record_authorization(tool_name, decision)
+            return self._public_decision(decision)
 
         self.validator.validate(
             tool,
@@ -95,7 +98,7 @@ class ToolGateway:
             decision,
         )
 
-        return decision
+        return self._public_decision(decision)
 
     def execute(
         self,
@@ -136,7 +139,7 @@ class ToolGateway:
 
         if decision.denied:
             raise AuthorizationError(
-                decision.explanation
+                self._public_decision(decision).explanation
             )
 
         # ---------------- Tool execution ----------------
@@ -160,6 +163,11 @@ class ToolGateway:
         )
 
         return result
+
+    def _public_decision(self, decision: Decision) -> Decision:
+        if decision.denied and not self.expose_denial_reasons:
+            return Decision.deny("Tool call denied by policy.")
+        return decision
 
     # ---------------------------------------------------------
 

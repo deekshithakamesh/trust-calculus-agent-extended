@@ -13,12 +13,13 @@ performs additional gateway-level checks when necessary.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import field, dataclass
 from typing import Any
 
 from trustcalc.policy.decisions import Decision
 from trustcalc.policy.engine import PolicyEngine
 from trustcalc.runtime.execution_context import ExecutionContext
+from trustcalc.sidechannels.denial_redaction import DenialFeedbackRedactor
 
 
 @dataclass(slots=True)
@@ -31,6 +32,7 @@ class PolicyEnforcer:
     """
 
     policy_engine: PolicyEngine
+    denial_redactor: DenialFeedbackRedactor = field(default_factory=lambda: DenialFeedbackRedactor(secrets=[]))
 
     # ---------------------------------------------------------
     # Public API
@@ -185,3 +187,7 @@ class PolicyEnforcer:
             arguments,
             context,
         ).allowed
+
+    def generate_denial(self, action: str, reason: str) -> str:
+        full_message = f"DENIED: {action} - {reason}"
+        return self.denial_redactor.redact(full_message)
