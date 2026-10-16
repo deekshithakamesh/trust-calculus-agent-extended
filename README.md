@@ -67,6 +67,41 @@ flow checks, and audit events are then applied consistently at the boundary.
 The stable top-level API is exported from `trustcalc`; lower-level modules are
 available for advanced integrations.
 
+## Leakage budgets
+
+`BudgetedGateway` limits the information exposed by repeated allow/deny
+responses. For each protected value it tracks the set of source labels
+consistent with the transcript and refuses a request when its worst-case
+outcome would exceed the configured budget. The default measure assumes a
+uniform prior and reports `log2(universe size / remaining labels)` bits. The
+label universe must include the true source label.
+
+The guarantee assumes every request is built from public information: neither
+its arguments nor its destination may depend on the protected value. A
+secret-dependent destination can still reveal information through whether a
+request is refused. A non-uniform prior changes the reported bit values and is
+model-dependent; the formal guarantee documented and tested here is a bound
+under the uniform prior only.
+
+`reserved_fraction` protects that fraction of the budget from requests not
+marked `legitimate=True`. Set `per_caller=True` to maintain separate budgets
+using `ExecutionContext.user_id`; callers have independent transcripts, so
+collusion between callers is not covered by that accounting. Use a distinct,
+stable `protected_value_id` when tracking separate protected values. Denials
+are returned as `Tool call denied by policy.` by default while the audit log
+retains the full reason. Set `expose_denial_reasons=True` only when disclosure
+is acceptable.
+
+Run the exhaustive comparison of shared, reserved, and per-caller budgets with:
+
+```bash
+PYTHONPATH=src python scripts/run_leakage_budget.py
+```
+
+It enumerates 20 labels, seven probing strategies, and six budget settings,
+then writes `evidence/leakage_budget.json`, `evidence/leakage_budget.md`, and
+`evidence/figures/leakage_curve.png`.
+
 ## Documentation and examples
 
 - [Architecture](docs/architecture.md)
