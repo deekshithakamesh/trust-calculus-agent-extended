@@ -230,3 +230,38 @@ def test_per_caller_budget_requires_an_execution_context_user_id():
 
     with pytest.raises(ValueError, match="require a non-empty user_id"):
         gateway.spent_bits()
+
+
+def test_budget_refusal_depends_on_transcript_and_public_request_not_secret():
+    universe = _universe((Confidentiality.INTERNAL,))
+    secrets = [
+        label for label in universe
+        if label.compartments in (frozenset({"HR"}), frozenset({"FIN", "HR"}))
+    ]
+    responses = []
+
+    for secret in secrets:
+        gateway = _budgeted_gateway(universe, budget=1.0)
+        prior_answer = gateway.authorize(
+            "echo",
+            {},
+            _context(secret, {"FIN"}),
+        )
+        assert prior_answer.denied
+        response = gateway.authorize(
+            "echo",
+            {},
+            _context(secret, {"HR"}),
+        )
+        responses.append(
+            (
+                response.denied,
+                response.explanation,
+                gateway.gateway.audit.history()[-1]["reason"],
+            )
+        )
+
+    assert responses == [
+        (True, "Tool call denied by policy.", "Leakage budget exceeded."),
+        (True, "Tool call denied by policy.", "Leakage budget exceeded."),
+    ]

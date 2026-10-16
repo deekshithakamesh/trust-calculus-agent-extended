@@ -143,7 +143,7 @@ class BudgetedGateway:
         """Return transcript leakage for a protected value under its prior."""
         _, knowledge = self._knowledge_for(context, protected_value_id)
         mass = sum(self._weights[key] for key in knowledge)
-        return -math.log2(mass)
+        return max(0.0, -math.log2(mass))
 
     def _worst_case_cost(
         self,
