@@ -14,6 +14,7 @@ from trustcalc.core.labels import (
 from trustcalc.core.values import TrustedValue
 from trustcalc.gateway import (
     AuthorizationError,
+    BudgetedGateway,
     GatewayError,
     InvalidArgumentError,
     InvalidToolError,
@@ -34,6 +35,7 @@ from trustcalc.tools.registry import ToolRegistry
 
 __all__ = [
     "AuthorizationError",
+    "BudgetedGateway",
     "CONFIDENTIAL_LABEL",
     "Confidentiality",
     "Decision",
